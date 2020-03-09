@@ -1,0 +1,45 @@
+.cu-progress-main {
+	position: relative;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	text-align: center;
+	justify-content: space-between;
+	margin: 0;
+	padding: 0;
+	background-color: inherit;
+	overflow: hidden;
+}
+
+.cu-area {
+	position: absolute;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	left: 0;
+	z-index: 2;
+}
+.cu-handle {
+	position: absolute;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	justify-content: space-around;
+	overflow: hidden;
+	z-index: 5;
+}
+
+.cu-handle text {
+	align-items: center;
+	text-align: center;
+	/* overflow: hidden; */
+	white-space: nowrap;
+}
+
+.cu-showInfo {
+	justify-content: space-around;
+	align-items: center;
+	overflow: hidden;
+	white-space: nowrap;
+}
