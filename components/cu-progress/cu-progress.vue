@@ -1,15 +1,17 @@
 <template>
 	<view>
 		<view class="cu-progress-main" :style="{'border-radius':bgBR,'width': progressMainW,'height':progressMainH,'background-color': backgroundColor}">
-			<view class="cu-progress-bar" :style="{'position':pgPn, 'bottom':progressBt,'background':pgbg,'margin-left':progressML, 'margin-bottom':progressMB,'width': progressW,'height':progressH,'border-radius':pgBR,'background-color':noActiveColor}"></view>
-			<movable-area class="cu-area" :style="{'flex-direction':flexDirection,'width':areaW,height:areaH}" @touchcancel="touchCancel" @touchstart="areaTouchStart"
-			 @touchmove="areaTouchMove" @touchend="touchEnd">
-				<movable-view class="cu-handle" disabled="disabled" :animation="false" :style="{ 'top':handleT, 'width':handleS,'height':handleS,'border-radius': handleBR,'background-color':handleColor}"
-				 @change="change" :damping="damping" :x="handleX" :y="handleY" :direction="direction == 'vertical' ? 'vertical' : 'horizontal'">
-					<text :class="handleIcon" :style="{'backgroundColor':iconColor,'font-size':iconS,'border-radius':iconBR}"></text>
-				</movable-view>
-			</movable-area>
-			<text v-if="showInfoStatus" class="cu-showInfo" :style="{'color':infoColor,'font-size':infoS,width:infoW}">{{showValue}}{{infoEndText}}</text>
+			<view class="cu-progress" :style="{'left':areaLeft, 'flex-direction':flexDirection,'width':areaW,height:areaH}">
+				<view class="cu-progress-bar" :style="{'bottom':pgBarBottom,'background':pgBarBg,'margin-left':pgBarML, 'margin-bottom':pgBarMB,'width': pgBarW,'height':pgBarH,'border-radius':pgBarBR,'background-color':noActiveColor}"></view>
+				<movable-area class="cu-area" :style="{'flex-direction':flexDirection,'width':areaW,height:areaH}" @touchcancel="touchCancel" @touchstart="areaTouchStart"
+				 @touchmove="areaTouchMove" @touchend="touchEnd">
+					<movable-view class="cu-handle" disabled="disabled" :animation="false" :style="{ 'top':handleT, 'width':handleS,'height':handleS,'border-radius': handleBR,'background-color':handleColor}"
+					 @change="change" :damping="damping" :x="handleX" :y="handleY" :direction="direction == 'vertical' ? 'vertical' : 'horizontal'">
+						<text :class="handleIcon" :style="{'backgroundColor':iconColor,'font-size':iconS,'border-radius':iconBR}"></text>
+					</movable-view>
+				</movable-area>
+			</view>
+			<text v-if="getShowInfoStatus2view" class="cu-showInfo" :style="{'right':infoRt, 'left':infoLt, 'color':infoColor,'font-size':infoS,width:infoW}">{{showValue}}{{infoEndText}}</text>
 		</view>
 	</view>
 </template>
@@ -26,7 +28,7 @@
 				handleMoveStatus: false,
 				handleX: 0, // 拖柄位置
 				handleY: 0,
-				progressInfo: {
+				progressBarInfo: {
 					left: 0,
 					bottom: 0,
 					width: 0,
@@ -47,31 +49,32 @@
 		beforeMount: function() {
 			const res = uni.getSystemInfoSync()
 			this.scale = 750 / res.windowWidth;
-			let tl = this.textLength(this.infoEndText)
 			// 0 为 false
-			this.showValue = Number.isNaN(parseInt(this.value)) ? this.minValue : parseInt(this.value)
 			if (this.maxValue - this.minValue == 0) {
 				console.error("min不能等于max:" + this.minValue + "->" + this.maxValue)
 				return
 			}
+			else{
+				this.showValue = this.valueFormat(this.value)
+			}
 			this.percent = Math.abs(this.showValue - this.minValue) / Math.abs(this.maxValue - this.minValue) * 100
-			let minl = this.textLength(this.minValue.toString() + this.infoEndText)
-			let maxl = this.textLength(this.maxValue.toString() + this.infoEndText)
+			let minl = this.textLength(this.minValue + this.infoEndText)
+			let maxl = this.textLength(this.maxValue + this.infoEndText)
 			this.showVL = maxl > minl ? maxl : minl
 		},
 		mounted: function() {
 			this.$nextTick(function() {
 				const query = uni.createSelectorQuery().in(this)
 				query.select(".cu-progress-bar").boundingClientRect(data => {
-					this.progressInfo.width = data.width
-					this.progressInfo.left = data.left
-					this.progressInfo.bottom = data.bottom
-					this.progressInfo.height = data.height
+					this.progressBarInfo.width = data.width
+					this.progressBarInfo.left = data.left
+					this.progressBarInfo.bottom = data.bottom
+					this.progressBarInfo.height = data.height
 					if (this.direction == 'vertical'){
-						this.handleY = this.progressInfo.height * (100 - this.percent) / 100
+						this.handleY = this.progressBarInfo.height * (100 - this.percent) / 100
 					}
 					else{
-						this.handleX = this.progressInfo.width * this.percent / 100
+						this.handleX = this.progressBarInfo.width * this.percent / 100
 					}
 				}).exec()
 				query.select(".cu-area").boundingClientRect(data => {
@@ -87,6 +90,14 @@
 			})
 		},
 		props: {
+			infoAlign: {
+				default: 'right',
+				type: String
+			},
+			step: {
+				default: 1,
+				type: [String, Number]
+			},
 			direction: {
 				default: 'horizontal', //vertical  方向
 				type: String
@@ -185,21 +196,20 @@
 			},
 		},
 		computed: {
+			getShowInfoStatus2view(){
+				if ((this.showInfo == true || this.showInfo == 'true') && this.direction != "vertical"){
+					return true
+				}
+				else{
+					return false
+				}
+			},
 			showVLC (){
-				let minl = this.textLength(this.minValue.toString() + this.infoEndText)
-				let maxl = this.textLength(this.maxValue.toString() + this.infoEndText)
+				let minl = this.textLength(this.minValue.toFixed(0) + this.infoEndText)
+				let maxl = this.textLength(this.maxValue.toFixed(0) + this.infoEndText)
 				
 				let L = maxl > minl ? maxl : minl
 				return L
-			},
-			pgPn (){
-				// progress position
-				if (this.direction == 'vertical'){
-					return 'absolute'
-				}
-				else{
-					return 'relative'
-				}
 			},
 			flexDirection (){
 				if (this.direction == 'vertical'){
@@ -209,7 +219,8 @@
 					return 'row'
 				}
 			},
-			progressBt (){
+			pgBarBottom (){
+				// progress-
 				if (this.direction == 'vertical'){
 					return '0px'
 				}
@@ -218,14 +229,14 @@
 				}
 			},
 			showInfoStatus (){
-				if ((this.showInfo == true || this.showInfo == 'true') && this.direction != "vertical"){
+				if (this.getShowInfoStatus() && this.direction != "vertical"){
 					return true
 				}
 				else{
 					return false
 				}
 			},
-			pgbg(){
+			pgBarBg(){
 				let bg1
 				if (this.direction == 'vertical'){
 					bg1 = "linear-gradient(to top," + this.activeColor + ' ' + this.percent + "%," + this.noActiveColor + ' ' + this.percent + "%)"
@@ -239,7 +250,7 @@
 				}
 				return bg1
 			},
-			pgBR(){
+			pgBarBR(){
 				return this.sizeDeal(this.borderRadius)[2]
 			},
 			bgBR() {
@@ -259,6 +270,25 @@
 			infoS() {
 				return this.sizeDeal(this.infoSize)[2]
 			},
+			infoRt(){
+				// showinfo right
+				if (this.infoAlign == 'left' && this.direction != 'vertical'){
+					return 'unset'
+				}
+				else{ return 0 }
+			},
+			infoLt(){
+				if (this.infoAlign == 'left' && this.direction != 'vertical'){
+					return 0
+				}
+				else if (this.infoAlign == 'center' && this.direction != 'vertical'){
+					let aw = this.area.width / 2
+					const s = this.sizeDeal(this.infoSize)
+					const size = aw - (s[0] * this.showVL) / 2 + 'px'
+					return size
+				}
+				else{ return 'unset' }
+			},
 			areaW: {
 				get (){
 					if (this.direction == 'vertical'){
@@ -268,34 +298,32 @@
 						const s = this.sizeDeal(this.infoSize)
 						const h = this.maxHeight()
 						let w
-						if (this.showInfo == true || this.showInfo == 'true') {
+						if (this.getShowInfoStatus()) {
 							w = 'calc(' + this.width + ' - ' + s[0] * this.showVL + s[1] + ')'
-						} else {
-							w = this.width
-						}
+						} else { w = this.width }
 						return w
 					}
 				},
-				set (w){
-					return w
-				}
+				set (w){ return w }
 				
 			},
 			areaH: {
 				get(){
-					if (this.direction == 'vertical'){
-						return this.width
-					}
-					else{
-						return this.maxHeight()[2]
-					}
+					if (this.direction == 'vertical'){ return this.width }
+					else{ return this.maxHeight()[2] }
 				},
-				set (v){
-					return v
-				}
+				set (v){ return v }
 				
 			},
-			progressW() {
+			areaLeft() {
+				if (this.infoAlign == 'left' && this.direction != 'vertical'){
+					const s = this.sizeDeal(this.infoSize)
+					const size = s[0] * this.showVL + s[1]
+					return size
+				}
+				else{ return 0 }
+			},
+			pgBarW() {
 				// width
 				if (this.direction == 'vertical'){
 					return this.sizeDeal(this.strokeWidth)[2]
@@ -313,7 +341,7 @@
 					return w2
 				}
 			},
-			progressH() {
+			pgBarH() {
 				// height
 				if (this.direction == 'vertical'){
 					const w = this.sizeDeal(this.width)
@@ -321,25 +349,12 @@
 					let	w2 = 'calc(' + w[2] + ' - ' + s2[2] + ')'
 					return w2
 				}
-				else{
-					return this.sizeDeal(this.strokeWidth)[2]
-				}
+				else{ return this.sizeDeal(this.strokeWidth)[2] }
 			},
-			progressL (){
-				if (this.direction == 'vertical') {
-					const s = this.sizeDeal(this.progressInfo.width)
-					const ah = Number(this.area.width) / 2
-					const t = ah - s[0] / 2 + 'px'
-					return t
-				}
-				else{
-					return 'unset'
-				}
-			},
-			progressML() {
+			pgBarML() {
 				// margin-left
 				if (this.direction == 'vertical'){
-					const s = this.sizeDeal(this.progressInfo.width)
+					const s = this.sizeDeal(this.progressBarInfo.width)
 					const ah = Number(this.area.width) / 2
 					const t = ah - s[0] / 2 + 'px'
 					return t
@@ -349,15 +364,13 @@
 					return s2[0] / 2 + s2[1]
 				}
 			},
-			progressMB() {
+			pgBarMB() {
 				// margin-bottom
 				if (this.direction == 'vertical'){
 					const s2 = this.sizeDeal(this.handleSize)
 					return s2[0] / 2 + s2[1]
 				}
-				else{
-					return 0
-				}
+				else{ return 0 }
 			},
 			handleS() {
 				const s = this.sizeDeal(this.handleSize)
@@ -410,12 +423,14 @@
 				return h
 			},
 			maxValue() {
-				let max = Number.isNaN(parseInt(this.max)) ? 100 : parseInt(this.max)
-				return max
+				let max = Number.isNaN(parseFloat(this.max)) ? 100 : parseFloat(this.max)
+				return this.valueFormat(max)
 			},
 			minValue() {
-				let min = Number.isNaN(parseInt(this.min)) ? 0 : parseInt(this.min)
-				return min
+				let min = Number.isNaN(parseFloat(this.min)) ? 0 : parseFloat(this.min)
+				let si = this.getStepInfo()
+				return Number(min.toFixed(si[1]))
+				// return this.valueFormat(min)
 			},
 		},
 		watch: {
@@ -425,7 +440,7 @@
 					const s = this.sizeDeal(this.infoSize)
 					const h = this.maxHeight()
 					let w
-					if (this.showInfo == true || this.showInfo == 'true') {
+					if (this.getShowInfoStatus()) {
 						w = 'calc(' + this.width + ' - ' + s[0] * this.showVL + s[1] + ')'
 					} else {
 						w = this.width
@@ -438,31 +453,57 @@
 			value(v) {
 				// 当处于拖动状态时，禁止进度条外部触发变化
 				if (!this.handleMoveStatus) {
-					this.showValue = Number.isNaN(parseInt(v)) ? this.minValue : parseInt(v)
+					this.showValue = this.valueFormat(v)
 					this.percent = (this.showValue - this.minValue) / Math.abs(this.maxValue - this.minValue) * 100
 					if (this.direction == 'vertical'){
-						this.handleY = this.progressInfo.height * this.percent / 100
+						this.handleY = this.progressBarInfo.height * this.percent / 100
 					}
 					else{
-						this.handleX = this.progressInfo.width * this.percent / 100
+						this.handleX = this.progressBarInfo.width * this.percent / 100
 					}
 				}
 			},
 		},
 		methods: {
+			valueFormat (v){
+				// set step
+				v = Number(v - this.minValue).toFixed(7)
+				let stepInfo = this.getStepInfo()
+				let valueE = v * 10 ** stepInfo[1]
+				let remainder = valueE % (stepInfo[0] * 10 ** stepInfo[1])
+				let remainderInt = Math.floor(remainder)
+				let value = (Math.floor(valueE) - remainderInt) / (10 ** stepInfo[1])
+				return Number((value + this.minValue).toFixed(6))
+			},
+			getStepInfo() {
+				// return step, decimal位数
+				let step = Number(this.step)
+				if (step <= 0 || !step){
+					return [1, 0]
+				}
+				else{
+					let steps = step.toString().split('.')
+					if (steps.length == 1){
+						return [step,0]
+					}
+					else {
+						return [step,steps[1].length]
+					}
+				}
+			},
 			clientInit() {
 				this.$nextTick(function() {
 					const query = uni.createSelectorQuery().in(this)
 					query.select(".cu-progress-bar").boundingClientRect(data => {
-						this.progressInfo.width = data.width
-						this.progressInfo.left = data.left
-						this.progressInfo.bottom = data.bottom
-						this.progressInfo.height = data.height
+						this.progressBarInfo.width = data.width
+						this.progressBarInfo.left = data.left
+						this.progressBarInfo.bottom = data.bottom
+						this.progressBarInfo.height = data.height
 						if (this.direction == 'vertical'){
-							this.handleY = this.progressInfo.height * this.percent / 100
+							this.handleY = this.progressBarInfo.height * this.percent / 100
 						}
 						else{
-							this.handleX = this.progressInfo.width * this.percent / 100
+							this.handleX = this.progressBarInfo.width * this.percent / 100
 						}
 					}).exec()
 					query.select(".cu-area").boundingClientRect(data => {
@@ -472,17 +513,22 @@
 						this.area.bottom = data.bottom
 						this.area.top = data.top
 					}).exec()
-					this.showValue = Number.isNaN(parseInt(this.value)) ? this.minValue : parseInt(this.value)
 					if (this.maxValue - this.minValue == 0) {
 						console.error("min不能等于max:" + this.minValue + "->" + this.maxValue)
 					}
 					else{
-						this.showValue = parseInt(this.percent * (this.maxValue - this.minValue) / 100)
+						let stepInfo = this.getStepInfo()
+						let v =  this.percent * (this.maxValue - this.minValue) / 100
+						let valueE = v * 10 ** stepInfo[1]
+						let remainder = valueE % (stepInfo[0] * 10 ** stepInfo[1])
+						let remainderInt = Math.floor(remainder)
+						let sv = (Math.floor(valueE) - remainderInt) / (10 ** stepInfo[1])
+						this.showValue = sv
 					}
 				})
 			},
 			getShowInfoStatus(){
-				if ((this.showInfo == true || this.showInfo == 'true') && this.direction != "vertical"){
+				if ((this.showInfo == true || this.showInfo == 'true') && this.direction != "vertical" && this.infoAlign !== 'center'){
 					return true
 				}
 				else{
@@ -491,14 +537,14 @@
 			},
 			textLength(t) {
 				t = t.toString()
+				let int = t.split('.')[0]
 				let subt = t.match(/[^\x00-\xff]/g)
 				let subl = 0
 				if (subt) {
 					subl = subt.length
 				}
-				let l = (t.length - subl) / 3 * 2 + subl
-				l = Number(l.toFixed(2))
-				return l
+				let l = (int.length - subl + this.getStepInfo()[1]) / 3 * 2 + subl + 0.2
+				return Number(l.toFixed(2))
 			},
 			maxHeight(vertical) {
 				let h = []
@@ -556,18 +602,18 @@
 					// #endif
 					cp = cp <= 1 ? cp : 1
 					cp = cp > 0 ? cp : 0
-					sv = parseInt(((1 - cp) * (this.maxValue - this.minValue)).toFixed(0)) + this.minValue
+					let value = Number(((1 - cp) * (this.maxValue - this.minValue))) + this.minValue
 					this.percent = (1 - cp) * 100
-					this.showValue = sv
+					this.showValue = this.valueFormat(value)
 					this.handleY = x
 				}
 				else{
 					cp = x / (this.area.width - s[0] - 1) // 多减 1 避免达不到maxValue
 					cp = cp <= 1 ? cp : 1
 					cp = cp > 0 ? cp : 0
-					sv = parseInt((cp * (this.maxValue - this.minValue)).toFixed(0)) + this.minValue
+					let value = Number((cp * (this.maxValue - this.minValue))) + this.minValue
 					this.percent = cp * 100
-					this.showValue = sv
+					this.showValue = this.valueFormat(value)
 					this.handleX = x
 				}
 				this.$emit('dragging', {
